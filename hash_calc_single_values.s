@@ -1,7 +1,7 @@
-	.global hash_calc_single_values
+	.global hash_calc_single_value
     .text
 	
-hash_calc_single_values: 
+hash_calc_single_value: 
 	push    {lr}
 	mov		r1 ,r0 // store the hash to th r1
 	mov		r2, #0 // initialize count
@@ -12,10 +12,12 @@ loop:
 	bne 	if_statement
 	
 	mov		r9, #10
-	sdiv 	r5, r4, r9
+	sdiv 	r5, r4, r9 // r5 = hash_value/10
 	cmp 	r5, #0
 	bne 	if_statement
 	mov 	r0, r4
+	pop 	{lr}
+	bx 		lr
 	
 if_statement:
 	cmp 	r1, #0
@@ -30,10 +32,12 @@ if_statement:
 	add 	r2, r2, r6
 	sdiv    r1, r1, r9
 	mov		r4, r2 
+	bl 		loop
 	
 if_statemant_for_zero_hash:
 	mov		r1, r2 
 	mov		r2, #0
+	bl 		if_statement
 	
 	
 	

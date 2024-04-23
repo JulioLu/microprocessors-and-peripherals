@@ -5,9 +5,9 @@
 #include <string.h>
 #include "queue.h"
 
-
-extern int test(int a);
 extern int sum_natural_numbers(int a);
+extern int hash_calc(char* array);
+extern int hash_calc_single_value(int a);
 
 
 
@@ -18,14 +18,11 @@ Queue rx_queue; // Queue for storing received characters
 void uart_rx_isr(uint8_t rx);
 
 int main() {
-	char buffer[20];
-
-	int i =109;
-	int result=0;
+	char result_buffer[20];
 	int sum_numbers = 0;
-	result = test(i);
-	sum_numbers = sum_natural_numbers(5);
-
+	int hash = 0;
+	int hash_value = 0;
+	
 	// Variables to help with UART read
 	uint8_t rx_char = 0;
 	char buff[BUFF_SIZE]; // The UART read string will be stored here
@@ -42,11 +39,6 @@ int main() {
 	uart_print("\r\n");// Print newline
 	
 	while(1) {
-		sprintf(buffer, "%d", sum_numbers);
-		
-		uart_print(buffer);
-
-
 		// Prompt the user to enter their full name
 		uart_print("Enter your full name:");
 		buff_index = 0; // Reset buffer index
@@ -76,6 +68,15 @@ int main() {
 		if (buff_index > BUFF_SIZE) {
 			uart_print("Stop trying to overflow my buffer! I resent that!\r\n");
 		}
+		
+		hash = hash_calc(buff);
+		hash_value = hash_calc_single_value(hash);
+		sum_numbers = sum_natural_numbers(hash_value);
+		sprintf(result_buffer,"%d" ,sum_numbers);
+		uart_print(result_buffer);
+		uart_print("\r\n");
+		printf("Result=%d\n\r", sum_numbers);
+		
 	}
 }
 
