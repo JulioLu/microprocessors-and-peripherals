@@ -17,6 +17,7 @@ void uart_rx_isr(uint8_t rx);
 
 int main() {
 	char result_buffer[20];
+	char hash_buffer[20];
 	int sum_numbers = 0;
 	int hash = 0;
 	int hash_value = 0;
@@ -38,7 +39,7 @@ int main() {
 	
 	while(1) {
 		// Prompt the user to enter their full name
-		uart_print("Enter your full name:");
+		uart_print("Enter your string:");
 		buff_index = 0; // Reset buffer index
 		
 		do {
@@ -68,9 +69,15 @@ int main() {
 		}
 		
 		hash = hash_calc(buff); // buff is the char array of the input that the user types on Tera Term
+		printf("Hash= %d\n\r", hash);
+		uart_print("Hash = ");
+		sprintf(hash_buffer,"%d" ,hash);
+		uart_print(hash_buffer); // print the hash in Tera Term 
+		uart_print("\r\n");
 		hash_value = hash_calc_single_value(hash);
 		sum_numbers = sum_natural_numbers(hash_value);
 		sprintf(result_buffer,"%d" ,sum_numbers);
+		uart_print("Final Result = ");
 		uart_print(result_buffer); // print the result in Tera Term 
 		uart_print("\r\n");
 		printf("Result=%d\n\r", sum_numbers); // print the result via printf 
