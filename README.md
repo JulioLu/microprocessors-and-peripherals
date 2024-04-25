@@ -1,2 +1,1 @@
-# microprocessors-and-peripherals
-Mcroprocessors and Peripherals
+# Laboratory 1 Source files 

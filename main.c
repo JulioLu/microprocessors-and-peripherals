@@ -9,8 +9,6 @@ extern int sum_natural_numbers(int a);
 extern int hash_calc(char* array);
 extern int hash_calc_single_value(int a);
 
-
-
 #define BUFF_SIZE 128 //read buffer length
 
 Queue rx_queue; // Queue for storing received characters
@@ -69,13 +67,13 @@ int main() {
 			uart_print("Stop trying to overflow my buffer! I resent that!\r\n");
 		}
 		
-		hash = hash_calc(buff);
+		hash = hash_calc(buff); // buff is the char array of the input that the user types on Tera Term
 		hash_value = hash_calc_single_value(hash);
 		sum_numbers = sum_natural_numbers(hash_value);
 		sprintf(result_buffer,"%d" ,sum_numbers);
-		uart_print(result_buffer);
+		uart_print(result_buffer); // print the result in Tera Term 
 		uart_print("\r\n");
-		printf("Result=%d\n\r", sum_numbers);
+		printf("Result=%d\n\r", sum_numbers); // print the result via printf 
 		
 	}
 }
