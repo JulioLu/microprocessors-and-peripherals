@@ -7,6 +7,7 @@
 #include "platform.h"
 #include "timer.h"
 #include "gpio.h"
+#include "stdbool.h"
 
 
 #define BUFF_SIZE 128 //read buffer length
@@ -18,6 +19,7 @@ void led_signle_isr(void);
 void led_even_isr(void);
 void button_isr(void);
 void Systick_Handler(void);
+bool is_even = true; 
 
 //Button Pressed counter 
 uint8_t button_counter = 0;
@@ -39,20 +41,20 @@ int main() {
 	uart_set_rx_callback(uart_rx_isr); // Set the UART receive callback function
 	uart_enable(); // Enable UART module
 	
+  timer_init((CLK_FREQ)/2);
+	timer_set_callback(led_signle_isr);
+	timer_enable();
 	
 	
 	__enable_irq(); // Enable interrupts
 	
 	uart_print("\r\n");// Print newline
 	
+	
 	//Initialize timer 
 	//timer_init(CLK_FREQ/2);
 	//(2000000);
-	timer_init(1000000);
 	
-	
-	//timer_set_callback(led_signle_isr);
-	timer_enable();
 	//timer_set_callback(led_even_isr);
 	
 	
@@ -96,11 +98,12 @@ int main() {
 		//TO DO -> check if it a number ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 		//if single
 		if(buff[buff_index-2]%2 == 1){
-			//timer_irq_handler();
+			is_even = false;
+			timer_enable();
 		}
 		//if even
 		else{
-			timer_disable();
+			is_even = true;
 		}
 		
 		//sprintf(result_buffer,"%d" ,sum_numbers);
@@ -121,12 +124,17 @@ void uart_rx_isr(uint8_t rx) {
 	}
 }
 
+// To Do: Priorities ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 void led_signle_isr(){
-	//while(1){
-	//timer_enable();
-	//gpio_set(PC_1, 1);
-	gpio_toggle(PC_1);
-	uart_print("LED status toggled\r\n");
+	if(is_even == false){
+		gpio_toggle(PC_1);
+		uart_print("LED status toggled\r\n"); //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	}
+	else{
+		timer_disable();
+	}
+	
 }
 
 void led_even_isr(){
@@ -151,14 +159,6 @@ void button_isr(void){
 	uart_print("\r\n");
 	//printf("The button has been pressed=%d\n\r", sum_numbers); // print the result via printf 
 	
-}
-
-void Systick_Handler(void){
-	//while(1){
-	//timer_enable();
-	//gpio_set(PC_1, 1);
-	gpio_toggle(PC_1);
-	uart_print("LED status toggled\r\n");
 }
 
 
