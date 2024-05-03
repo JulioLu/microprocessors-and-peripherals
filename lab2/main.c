@@ -16,9 +16,7 @@ Queue rx_queue; // Queue for storing received characters
 
 void uart_rx_isr(uint8_t rx);
 void led_signle_isr(void);
-void led_even_isr(void);
 void button_isr(void);
-void Systick_Handler(void);
 bool is_even = true; 
 
 //Button Pressed counter 
@@ -41,27 +39,18 @@ int main() {
 	uart_set_rx_callback(uart_rx_isr); // Set the UART receive callback function
 	uart_enable(); // Enable UART module
 	
-  timer_init((CLK_FREQ)/2);
-	timer_set_callback(led_signle_isr);
-	timer_enable();
-	
+	// Initialize timer interrupt
+  timer_init((CLK_FREQ)/2); // interrupt every 0.5sec
+	timer_set_callback(led_signle_isr); // callback function
+	timer_enable();	
 	
 	__enable_irq(); // Enable interrupts
 	
 	uart_print("\r\n");// Print newline
 	
-	
-	//Initialize timer 
-	//timer_init(CLK_FREQ/2);
-	//(2000000);
-	
-	//timer_set_callback(led_even_isr);
-	
-	
-	gpio_set_trigger(PC_13, Rising);
-	//gpio_set(PC_1, 1);
-	
-	gpio_set_callback(PC_13, button_isr);
+	//Definitions for GPIO interrupt
+	gpio_set_trigger(PC_13, Rising); // PC_13 corresponds to the button and the trigger condition is to be pressed
+	gpio_set_callback(PC_13, button_isr);// callback function
 	
 	while(1) {
 		// Prompt the user to enter their full name
@@ -96,24 +85,17 @@ int main() {
 		
 		// Check last digit of AEM 
 		//TO DO -> check if it a number ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		//if single
+		// Checking if the digit is signle 
 		if(buff[buff_index-2]%2 == 1){
-			is_even = false;
-			timer_enable();
+			is_even = false; // update the variable 
+			timer_enable(); // enable timer because it might be disabled by previous input
 		}
-		//if even
+		// Checking if the digit is even
 		else{
-			is_even = true;
+			is_even = true; // update the variable
 		}
-		
-		//sprintf(result_buffer,"%d" ,sum_numbers);
-		//uart_print(result_buffer); // print the result in Tera Term 
-		//uart_print("\r\n");
-		//printf("Result=%d\n\r", sum_numbers); // print the result via printf 
-		
 	}
 }
-
 
 // Interrupt Service Routine for UART receive
 void uart_rx_isr(uint8_t rx) {
@@ -128,36 +110,29 @@ void uart_rx_isr(uint8_t rx) {
 
 void led_signle_isr(){
 	if(is_even == false){
-		gpio_toggle(PC_1);
+		gpio_toggle(PC_1);// change the status of the LED every 0.5 sec defined in the beggining from the timer_init()
 		uart_print("LED status toggled\r\n"); //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	}
 	else{
-		timer_disable();
-	}
-	
-}
-
-void led_even_isr(){
-	timer_disable();
+		timer_disable(); // keeping the timer disabled while we are getting single digits
+	}	
 }
 
 void button_isr(void){
-	if(gpio_get(PC_1) == 0){
-		gpio_set(PC_1, 1); //define pin
-		uart_print("LED status toggled\r\n");		
+	if(gpio_get(PC_1) == 0){ // checking if the LED is switched off
+		gpio_set(PC_1, 1); // switching it on 
+		uart_print("LED status toggled\r\n");	// print change	
 	}
 	else{
-		gpio_set(PC_1, 0); //define pin
-		uart_print("LED status toggled\r\n");
+		gpio_set(PC_1, 0); //switching it off
+		uart_print("LED status toggled\r\n");//print change 
 	}
-	//gpio_set(PC_1, 1);
-	char result_buffer[20];
-	button_counter += 1;
+	char result_buffer[20]; 
+	button_counter += 1; // update the counter - the button is pressed
 	sprintf(result_buffer,"%d" ,button_counter);
 	uart_print("The button has been pressed= ");
-	uart_print(result_buffer); // print the result in Tera Term 
+	uart_print(result_buffer); // print the result in Tera Term  
 	uart_print("\r\n");
-	//printf("The button has been pressed=%d\n\r", sum_numbers); // print the result via printf 
 	
 }
 
