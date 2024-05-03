@@ -18,6 +18,7 @@ void uart_rx_isr(uint8_t rx);
 void led_signle_isr(void);
 void button_isr(void);
 bool is_even = true; 
+bool is_aem = false;
 
 //Button Pressed counter 
 uint8_t button_counter = 0;
@@ -83,17 +84,28 @@ int main() {
 			uart_print("Stop trying to overflow my buffer! I resent that!\r\n");
 		}
 		
-		// Check last digit of AEM 
-		//TO DO -> check if it a number ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-		// Checking if the digit is signle 
-		if(buff[buff_index-2]%2 == 1){
-			is_even = false; // update the variable 
-			timer_enable(); // enable timer because it might be disabled by previous input
+		for(uint8_t i =0; i<= buff_index; i++){
+			if( buff[i] <= 48 || buff[i] >= 57){
+				is_aem = false;
+				uart_print("Not an AEM\r\n");
+				break;
+			}
+			if(i== buff_index - 1){
+				is_aem = true;
+			}
 		}
-		// Checking if the digit is even
-		else{
-			is_even = true; // update the variable
+		if(is_aem){
+			// Check last digit of AEM 
+			if(buff[buff_index-2]%2 == 1){
+				is_even = false; // update the variable 
+				timer_enable(); // enable timer because it might be disabled by previous input
+			}
+			// Checking if the digit is even
+			else{
+				is_even = true; // update the variable
+			}
 		}
+		
 	}
 }
 
@@ -106,12 +118,10 @@ void uart_rx_isr(uint8_t rx) {
 	}
 }
 
-// To Do: Priorities ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 void led_signle_isr(){
 	if(is_even == false){
 		gpio_toggle(PC_1);// change the status of the LED every 0.5 sec defined in the beggining from the timer_init()
-		uart_print("LED status toggled\r\n"); //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		uart_print("LED status toggled\r\n");
 	}
 	else{
 		timer_disable(); // keeping the timer disabled while we are getting single digits
