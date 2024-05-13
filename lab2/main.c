@@ -83,14 +83,15 @@ int main() {
 		if (buff_index > BUFF_SIZE) {
 			uart_print("Stop trying to overflow my buffer! I resent that!\r\n");
 		}
-		
-		for(uint8_t i =0; i<= buff_index; i++){
-			if( buff[i] <= 48 || buff[i] >= 57){
+		//checking if it is an vaild AEM
+		for(uint8_t i =0; i< buff_index-1; i++){
+			
+			if( buff[i] < 48 || buff[i] > 57){
 				is_aem = false;
 				uart_print("Not an AEM\r\n");
 				break;
 			}
-			if(i== buff_index - 1){
+			if(i== buff_index - 2){
 				is_aem = true;
 			}
 		}
