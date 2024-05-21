@@ -85,7 +85,6 @@ int main() {
 		}
 		//checking if it is an vaild AEM
 		for(uint8_t i =0; i< buff_index-1; i++){
-			
 			if( buff[i] < 48 || buff[i] > 57){
 				is_aem = false;
 				uart_print("Not an AEM\r\n");
@@ -100,6 +99,8 @@ int main() {
 			if(buff[buff_index-2]%2 == 1){
 				is_even = false; // update the variable 
 				timer_enable(); // enable timer because it might be disabled by previous input
+				uart_print("LED is blinking\r\n");
+				is_aem = false;
 			}
 			// Checking if the digit is even
 			else{
@@ -122,7 +123,6 @@ void uart_rx_isr(uint8_t rx) {
 void led_signle_isr(){
 	if(is_even == false){
 		gpio_toggle(PC_1);// change the status of the LED every 0.5 sec defined in the beggining from the timer_init()
-		uart_print("LED status toggled\r\n");
 	}
 	else{
 		timer_disable(); // keeping the timer disabled while we are getting single digits
@@ -131,12 +131,14 @@ void led_signle_isr(){
 
 void button_isr(void){
 	if(gpio_get(PC_1) == 0){ // checking if the LED is switched off
+		timer_disable();
 		gpio_set(PC_1, 1); // switching it on 
-		uart_print("LED status toggled\r\n");	// print change	
+		uart_print("LED is ON\r\n");	// print change	
 	}
 	else{
+		timer_disable();
 		gpio_set(PC_1, 0); //switching it off
-		uart_print("LED status toggled\r\n");//print change 
+		uart_print("LED is OFF\r\n");//print change 
 	}
 	char result_buffer[20]; 
 	button_counter += 1; // update the counter - the button is pressed
