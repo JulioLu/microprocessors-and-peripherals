@@ -9,17 +9,17 @@
 #include "gpio.h"
 #include "stdbool.h"
 #include "delay.h"
-
+#include "dht11.h"
+#include <stdlib.h>
 
 #define BUFF_SIZE 128 //read buffer length
 
 Queue rx_queue; // Queue for storing received characters
 
-float temperature = 0;
+float *sensorData;
 
 void uart_rx_isr(uint8_t rx);
 void get_temperature_isr(void);
-float get_temperature(void);
 void higher_than_25_isr(void);
 void lower_than_20_isr(void);
 void is_between_20_and_25(void);
@@ -28,6 +28,7 @@ void change_period_isr(void);
 bool is_higher_than_25 = false;
 bool is_lower_than_20 = false;
 bool is_touching = false;
+bool print_humidity = false;
 unsigned long period = 2;
 
 int sum_of_last_two_digits = 0;
@@ -41,8 +42,8 @@ int main() {
 	uint32_t buff_index;
 	
 	// Set the mode of the used pins
-	gpio_set_mode(PA_5, Input);
-	gpio_set_mode(PC_1, Output);	
+	gpio_set_mode(PA_5, Output);
+	gpio_set_mode(PC_3, Input);	
 	
 	// Initialize the receive queue and UART
 	queue_init(&rx_queue, 128);
@@ -51,18 +52,17 @@ int main() {
 	uart_enable(); // Enable UART module
 	
 	// Initialize timer interrupt
-  timer_init((CLK_FREQ)*period); // interrupt every 2sec
+  timer_init((CLK_FREQ)/2); // interrupt every 2sec
 	timer_set_callback(get_temperature_isr); // callback function
-	timer_enable();	
+	timer_disable();
 	
 	__enable_irq(); // Enable interrupts
 	
 	uart_print("\r\n");// Print newline
 	
 	//Definitions for GPIO interrupt
-	gpio_set_trigger(PC_3, Rising); // PC_13 corresponds to the button and the trigger condition is to be pressed
-	gpio_set_callback(PC_1, change_period_isr);// callback function
-	
+	//gpio_set_trigger(PC_3, Rising); // PC_13 corresponds to the button and the trigger condition is to be pressed
+	//gpio_set_callback(PC_3, change_period_isr);// callback function	
 	uart_print("Enter your AEM:");
 	buff_index = 0; // Reset buffer index
 	
@@ -92,26 +92,22 @@ int main() {
 		uart_print("Stop trying to overflow my buffer! I resent that!\r\n");
 	}
 	
-	sum_of_last_two_digits = buff[buff_index-2] + buff[buff_index-3];
+	sum_of_last_two_digits = buff[buff_index-2] -48 + buff[buff_index-3] - 48;
 	
-	while(1) {
+	
+	
+	
+	timer_enable();	// Enable timer after the submition of the AEM.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
+	
+	
+ // initialization of the communication with the sensor only once 
+
+	
+	while(true) {
+		delay_ms(1000);
+		///startSignal();
 		// Prompt the user to enter their full name
-		
-		
-		if(temperature>25){
-			is_higher_than_25 = true;
-			
-		}
-		else{
-			is_higher_than_25 = false;
-		}
-		
-		if(temperature<20){
-			is_lower_than_20 = true; 			
-		}
-		else{
-			is_lower_than_20 = false; 
-		}
 		
 	}
 }
@@ -126,25 +122,52 @@ void uart_rx_isr(uint8_t rx) {
 }
 
 void get_temperature_isr(){
+		delay_ms(period*1000 - 500);
 	
-	temperature = get_temperature();
-	char temperature_buffer[20]; 
-	sprintf(temperature_buffer,"%f" ,(double)temperature);
-	uart_print("The temperature is = ");
-	uart_print(temperature_buffer); // print the result in Tera Term  
-	uart_print("\r\n");
+		sensorData = getData();	
+		char buffer[20]; 
+		sprintf(buffer,"%f" ,(double)sensorData[1]);
+		uart_print("The temperature is = ");
+		uart_print(buffer); // print the result in Tera Term  
+		uart_print("\r\n");
 	
-	char period_buffer[20]; 
-	sprintf(period_buffer,"%d" ,(int)period);
-	uart_print("The temperature is = ");
-	uart_print(period_buffer); // print the result in Tera Term  
-	uart_print("\r\n");
+		sprintf(buffer,"%d" ,(int)period);
+		uart_print("The period is = ");
+		uart_print(buffer); // print the result in Tera Term  
+		uart_print("\r\n");
+		
+		if(print_humidity){
+			sprintf(buffer,"%f" ,(double)sensorData[0]);
+			uart_print("The humidity is = ");
+			uart_print(buffer); // print the result in Tera Term  
+			uart_print("\r\n");
+		}
+				
+	
+			
+		
+		if(sensorData[1]>33){
+			is_higher_than_25 = true;	
+			is_lower_than_20 = false; 
+
+		}
+		else{
+			is_higher_than_25 = false;
+		}
+		
+		if(sensorData[1]<30){
+			is_lower_than_20 = true; 	
+			is_higher_than_25 = false;			
+		}
+		else{
+			is_lower_than_20 = false; 
+		}
+		
+		higher_than_25_isr();
+		lower_than_20_isr();
+		is_between_20_and_25();
 }
 
-float get_temperature(){
-	//fill later ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	return temperature;
-}
 
 void higher_than_25_isr(void){
 	if(is_higher_than_25){
@@ -160,7 +183,7 @@ void lower_than_20_isr(void){
 
 
 void is_between_20_and_25(void){
-		if(!(is_lower_than_20 && is_higher_than_25)){
+		if((!is_lower_than_20 && !is_higher_than_25)){
 			gpio_toggle(PA_5);
 			delay_ms(1000);
 		}
@@ -168,23 +191,24 @@ void is_between_20_and_25(void){
 }
 
 
-
 void change_period_isr(void){
+	print_humidity = false;
 	button_counter++;
 	if(button_counter==1){
 		period = (unsigned long)sum_of_last_two_digits; 
+		if (period ==2){
+			period = 4;
+		}
 	}
 	else{
 		if(button_counter%2==1){
 			period=3;
 		}
 		else{
-			//print humidity with the temperature together
+			print_humidity = true;
+			
 		}
 		
 	}
-		timer_init((CLK_FREQ)*period); // interrupt every 2sec
-		timer_set_callback(get_temperature_isr); // callback function
-		timer_enable();
 
 }
