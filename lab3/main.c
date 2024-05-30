@@ -16,7 +16,7 @@
 
 Queue rx_queue; // Queue for storing received characters
 
-float *sensorData;
+float *sensorData;// array where the temperature and humididty measurements are stored 
 
 void uart_rx_isr(uint8_t rx);
 void get_temperature_isr(void);
@@ -27,12 +27,12 @@ void change_period_isr(void);
 
 bool is_higher_than_25 = false;
 bool is_lower_than_20 = false;
-bool is_touching = false;
+bool is_touching = false; // for the tiuch sensor
 bool print_humidity = false;
-unsigned long period = 2;
+unsigned long period = 2; // the period of the measurements 
 
-int sum_of_last_two_digits = 0;
-int button_counter=0;
+int sum_of_last_two_digits = 0; // sum of the 2 last digits of the AEM 
+int button_counter=0; // counts the times the touch sensor button has been pressed 
 
 int main() {
 	
@@ -51,18 +51,18 @@ int main() {
 	uart_set_rx_callback(uart_rx_isr); // Set the UART receive callback function
 	uart_enable(); // Enable UART module
 	
-	// Initialize timer interrupt
-  timer_init((CLK_FREQ)/2); // interrupt every 2sec
+	// Initialize timer interrupt for the temperature - humidity measurements 
+  timer_init((CLK_FREQ)/2); 
 	timer_set_callback(get_temperature_isr); // callback function
-	timer_disable();
+	timer_disable(); // keeping the timer disabled until after the submission of the AEM 
 	
 	__enable_irq(); // Enable interrupts
 	
 	uart_print("\r\n");// Print newline
 	
 	//Definitions for GPIO interrupt
-	//gpio_set_trigger(PC_3, Rising); // PC_13 corresponds to the button and the trigger condition is to be pressed
-	//gpio_set_callback(PC_3, change_period_isr);// callback function	
+	gpio_set_trigger(PC_3, Rising); // PC_13 corresponds to the button and the trigger condition is to be pressed
+	gpio_set_callback(PC_3, change_period_isr);// callback function	
 	uart_print("Enter your AEM:");
 	buff_index = 0; // Reset buffer index
 	
@@ -92,22 +92,12 @@ int main() {
 		uart_print("Stop trying to overflow my buffer! I resent that!\r\n");
 	}
 	
+	// subtracting 48 from both digits to tranform them from ASCII to normal decimal values 
 	sum_of_last_two_digits = buff[buff_index-2] -48 + buff[buff_index-3] - 48;
+		
+	timer_enable();	// Enable timer after the submition of the AEM.
 	
-	
-	
-	
-	timer_enable();	// Enable timer after the submition of the AEM.~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	
-	
-	
- // initialization of the communication with the sensor only once 
-
-	
-	while(true) {
-		delay_ms(1000);
-		///startSignal();
-		// Prompt the user to enter their full name
+	while(1) {
 		
 	}
 }
@@ -122,40 +112,39 @@ void uart_rx_isr(uint8_t rx) {
 }
 
 void get_temperature_isr(){
+	//delay based on the current period for the sensor measurement 
 		delay_ms(period*1000 - 500);
-	
 		sensorData = getData();	
+	
+	// Print Temperature 
 		char buffer[20]; 
 		sprintf(buffer,"%f" ,(double)sensorData[1]);
 		uart_print("The temperature is = ");
 		uart_print(buffer); // print the result in Tera Term  
 		uart_print("\r\n");
 	
+	// Print Current period 
 		sprintf(buffer,"%d" ,(int)period);
 		uart_print("The period is = ");
 		uart_print(buffer); // print the result in Tera Term  
 		uart_print("\r\n");
-		
+	
+	// Print Humidity 	
 		if(print_humidity){
 			sprintf(buffer,"%f" ,(double)sensorData[0]);
 			uart_print("The humidity is = ");
 			uart_print(buffer); // print the result in Tera Term  
 			uart_print("\r\n");
-		}
-				
-	
-			
+		}		
 		
-		if(sensorData[1]>33){
+		if(sensorData[1]>25){
 			is_higher_than_25 = true;	
 			is_lower_than_20 = false; 
-
 		}
 		else{
 			is_higher_than_25 = false;
 		}
-		
-		if(sensorData[1]<30){
+		if(sensorData[1]<20){
 			is_lower_than_20 = true; 	
 			is_higher_than_25 = false;			
 		}
@@ -168,47 +157,47 @@ void get_temperature_isr(){
 		is_between_20_and_25();
 }
 
-
 void higher_than_25_isr(void){
 	if(is_higher_than_25){
+		// switch on the LED 
 		gpio_set(PA_5,1);
 	}
 }
 
 void lower_than_20_isr(void){
 	if(is_lower_than_20){
+		// switch off the LED 
 		gpio_set(PA_5,0);
 	}
 }
 
-
 void is_between_20_and_25(void){
 		if((!is_lower_than_20 && !is_higher_than_25)){
+			// toggle LED every 1 sec
 			gpio_toggle(PA_5);
 			delay_ms(1000);
-		}
-		
+		}	
 }
-
 
 void change_period_isr(void){
 	print_humidity = false;
-	button_counter++;
+	button_counter++; // the counter is increased every time the touch sensor is pressed 
+	// only for the first time 
 	if(button_counter==1){
 		period = (unsigned long)sum_of_last_two_digits; 
 		if (period ==2){
 			period = 4;
 		}
 	}
+	// after the first time 
 	else{
+		// if not even 
 		if(button_counter%2==1){
 			period=3;
 		}
+		// if even
 		else{
 			print_humidity = true;
-			
-		}
-		
+		}	
 	}
-
 }
